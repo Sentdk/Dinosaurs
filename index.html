@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chrome Dinosaur Game</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #f7f7f7;
+    }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    canvas {
+      background: #fff;
+      border: 2px solid #222;
+      box-shadow: 0 0 16px #bbb;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="600" height="200"></canvas>
+  <script>
+    // Constants
+    const GAME_SPEED = 6;
+    const GRAVITY = 0.6;
+    const JUMP_POWER = -11.5;
+    const GROUND_HEIGHT = 20;
+
+    // Variables
+    let gameActive = false;
+    let score = 0;
+    let highScore = 0;
+
+    // Dino Object
+    const dino = {
+      x: 50, y: 140, width: 40, height: 40,
+      vy: 0, grounded: true
+    };
+    // Obstacles Array
+    const obstacles = [];
+
+    // Canvas Setup
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    function resetGame() {
+      score = 0;
+      dino.y = 140;
+      dino.vy = 0;
+      dino.grounded = true;
+      obstacles.length = 0;
+      gameActive = true;
+    }
+
+    // Add obstacle
+    function addObstacle() {
+      const height = 20 + Math.random() * 20;
+      obstacles.push({
+        x: canvas.width,
+        y: canvas.height - GROUND_HEIGHT - height,
+        width: 15 + Math.random()*15,
+        height,
+      });
+    }
+
+    // Render dino (simple box/legs)
+    function drawDino() {
+      ctx.fillStyle = '#222';
+      ctx.fillRect(dino.x, dino.y, dino.width, dino.height);
+      // Draw legs
+      ctx.fillRect(dino.x+6, dino.y+dino.height, 8, 8);
+      ctx.fillRect(dino.x+26, dino.y+dino.height, 8, 8);
+      // Eye
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(dino.x+28, dino.y+14, 4, 4);
+    }
+
+    // Render obstacles
+    function drawObstacles() {
+      ctx.fillStyle = '#446733';
+      obstacles.forEach(obs => {
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+      });
+    }
+
+    // Game loop
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Ground
+      ctx.fillStyle = '#c4bebe';
+      ctx.fillRect(0, canvas.height-GROUND_HEIGHT, canvas.width, GROUND_HEIGHT);
+      // Dino
+      drawDino();
+      // Obstacles
+      drawObstacles();
+      // HUD
+      ctx.fillStyle = '#333';
+      ctx.font = '20px monospace';
+      ctx.fillText(`Score: ${score}`, 10, 30);
+      ctx.fillText(`High: ${highScore}`, 470, 30);
+
+      if (!gameActive) {
+        ctx.font = '30px monospace';
+        ctx.fillStyle = '#333a';
+        ctx.fillText('Press SPACE to Start!', 140, 110);
+        return;
+      }
+
+      // Update dino
+      dino.vy += GRAVITY;
+      dino.y += dino.vy;
+      if (dino.y > 140) {
+        dino.y = 140;
+        dino.vy = 0;
+        dino.grounded = true;
+      }
+
+      // Update obstacles
+      for (let obs of obstacles) {
+        obs.x -= GAME_SPEED;
+      }
+      // Remove offscreen obstacles
+      while (obstacles.length && obstacles[0].x + obstacles[0].width < 0)
+        obstacles.shift();
+      // Add new obstacles
+      if (obstacles.length===0 || (obstacles[obstacles.length-1].x < 320 && Math.random() < 0.01)) {
+        addObstacle();
+      }
+      // Collision detection
+      for (let obs of obstacles) {
+        if (
+          dino.x < obs.x + obs.width &&
+          dino.x + dino.width > obs.x &&
+          dino.y < obs.y + obs.height &&
+          dino.y + dino.height > obs.y
+        ) {
+          gameActive = false;
+          highScore = Math.max(score, highScore);
+        }
+      }
+      // Score
+      score++;
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Controls
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        if (!gameActive) {
+          resetGame();
+          gameLoop();
+        } else if (dino.grounded) {
+          dino.vy = JUMP_POWER;
+          dino.grounded = false;
+        }
+      }
+    });
+
+    // Initial Screen
+    gameLoop();
+  </script>
+</body>
+</html>
